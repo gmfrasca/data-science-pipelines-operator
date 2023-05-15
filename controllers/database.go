@@ -21,14 +21,11 @@ import (
 	dspav1alpha1 "github.com/opendatahub-io/data-science-pipelines-operator/api/v1alpha1"
 )
 
-const dbSecret = "mariadb/secret.yaml.tmpl"
-
 var dbTemplates = []string{
 	"mariadb/deployment.yaml.tmpl",
 	"mariadb/pvc.yaml.tmpl",
 	"mariadb/sa.yaml.tmpl",
 	"mariadb/service.yaml.tmpl",
-	dbSecret,
 }
 
 func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha1.DataSciencePipelinesApplication,
@@ -45,13 +42,7 @@ func (r *DSPAReconciler) ReconcileDatabase(ctx context.Context, dsp *dspav1alpha
 
 	// If external db is specified, it takes precedence
 	if externalDBSpecified {
-		log.Info("Deploying external db secret.")
-		// If using external DB, we just need to create the secret
-		// for apiserver
-		err := r.Apply(dsp, params, dbSecret)
-		if err != nil {
-			return err
-		}
+		log.Info("Using externalDB, bypassing database deployment.")
 	} else if deployMariaDB {
 		log.Info("Applying mariaDB resources.")
 		for _, template := range dbTemplates {
