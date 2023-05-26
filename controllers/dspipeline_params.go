@@ -46,6 +46,7 @@ type DSPAParams struct {
 	MlPipelineUI         *dspa.MlPipelineUI
 	MariaDB              *dspa.MariaDB
 	Minio                *dspa.Minio
+	MLMD                 *dspa.MLMD
 	DBConnection
 	ObjectStorageConnection
 }
@@ -83,6 +84,13 @@ func (p *DSPAParams) UsingExternalDB(dsp *dspa.DataSciencePipelinesApplication) 
 func (p *DSPAParams) UsingExternalStorage(dsp *dspa.DataSciencePipelinesApplication) bool {
 	if dsp.Spec.ObjectStorage != nil && dsp.Spec.ObjectStorage.ExternalStorage != nil {
 		return true
+	}
+	return false
+}
+
+func (p *DSPAParams) UsingMLMD(dsp *dspa.DataSciencePipelinesApplication) bool {
+	if dsp.Spec.MLMD != nil {
+		return dsp.Spec.MLMD.Deploy
 	}
 	return false
 }
@@ -361,6 +369,7 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 	p.MariaDB = dsp.Spec.MariaDB.DeepCopy()
 	p.Minio = dsp.Spec.Minio.DeepCopy()
 	p.OAuthProxy = config.GetStringConfigWithDefault(config.OAuthProxyImagePath, config.DefaultImageValue)
+	p.MLMD = dsp.Spec.MLMD.DeepCopy()
 
 	// TODO: If p.<component> is nil we should create defaults
 
@@ -402,6 +411,18 @@ func (p *DSPAParams) ExtractParams(ctx context.Context, dsp *dspa.DataSciencePip
 		p.MlPipelineUI.Image = dsp.Spec.MlPipelineUI.Image
 		setStringDefault(config.MLPipelineUIConfigMapPrefix+dsp.Name, &p.MlPipelineUI.ConfigMapName)
 		setResourcesDefault(config.MlPipelineUIResourceRequirements, &p.MlPipelineUI.Resources)
+	}
+
+	if p.MLMD != nil {
+		mlmdEnvoyImageFromConfig := config.GetStringConfigWithDefault(config.MlmdEnvoyImagePath, config.DefaultMlmdEnvoyImageValue)
+		mlmdGRPCImageFromConfig := config.GetStringConfigWithDefault(config.MlmdGRPCImagePath, config.DefaultMlmdGRPCImageValue)
+		mlmdWriterImageFromConfig := config.GetStringConfigWithDefault(config.MlmdWriterImagePath, config.DefaultMlmdWriterImageValue)
+		setStringDefault(mlmdEnvoyImageFromConfig, &p.MLMD.Envoy.Image)
+		setStringDefault(mlmdGRPCImageFromConfig, &p.MLMD.GRPC.Image)
+		setStringDefault(mlmdWriterImageFromConfig, &p.MLMD.Writer.Image)
+		setResourcesDefault(config.MlmdEnvoyResourceRequirements, &p.MLMD.Envoy.Resources)
+		setResourcesDefault(config.MlmdGRPCResourceRequirements, &p.MLMD.GRPC.Resources)
+		setResourcesDefault(config.MlmdWriterResourceRequirements, &p.MLMD.Writer.Resources)
 	}
 
 	err := p.SetupDBParams(ctx, dsp, client, log)

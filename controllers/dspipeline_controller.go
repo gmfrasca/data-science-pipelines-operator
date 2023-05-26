@@ -278,6 +278,11 @@ func (r *DSPAReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	err = r.ReconcileMLMD(dspa, params)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	log.Info("Updating CR status")
 	// Refresh DSPA before updating
 	err = r.Get(ctx, req.NamespacedName, dspa)
